@@ -3,6 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -22,12 +23,33 @@ jobs:
         with:
           node-version: 20
           cache: npm
+
       - run: npm ci
+
       - name: Build Angular (set base href for project page)
         run: npm run build -- --base-href=/gh-actions-grpc-demo/
-      - name: Add 404.html for SPA routing
+
+      - name: Resolve dist path and add 404.html (for SPA routing)
+        shell: bash
         run: |
-          outdir=$(ls -d dist/*/browser | head -n1)
-          cp "$outdir/index.html" "$outdir/404.html"
+          OUTDIR=$(ls -d dist/*/browser | head -n1)
+          echo "OUTDIR=$OUTDIR" >> $GITHUB_ENV
+          echo "Resolved OUTDIR: $OUTDIR"
+          ls -lah "$OUTDIR"
+          cp "$OUTDIR/index.html" "$OUTDIR/404.html"
+
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.OUTDIR }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

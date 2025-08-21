@@ -23,21 +23,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # If deploying to a project page, set base href so routing works:
-      - run: npm run build -- --base-href=/gh-actions-grpc-demo/
+      - name: Build Angular (set base href for project page)
+        run: npm run build -- --base-href=/gh-actions-grpc-demo/
+      - name: Add 404.html for SPA routing
+        run: |
+          outdir=$(ls -d dist/*/browser | head -n1)
+          cp "$outdir/index.html" "$outdir/404.html"
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Works for modern Angular: dist/<app-name>/browser
-          path: dist/**/browser
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/upload-pages-artifact
